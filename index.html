@@ -2,17 +2,14 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>深渊对垒：资深策划打磨版</title>
+    <title>深渊对垒：终极数值版</title>
     <style>
         :root {
             --bg: #030305;
             --panel: #0d0d12;
-            --accent: #c5a059; /* 古典金 */
+            --accent: #c5a059;
             --hp: #a30000;
             --xp: #1e40af;
-            --node-off: #2a2a2a;
-            --node-on: #c5a059;
-            --node-reachable: #4a4a4a;
             --text: #d1d5db;
         }
 
@@ -22,31 +19,28 @@
             display: flex; flex-direction: column; align-items: center;
         }
 
-        /* 顶部状态栏 */
+        /* UI 布局 */
         #top-bar {
             width: 100%; max-width: 900px; padding: 20px;
             display: flex; justify-content: space-between; align-items: center;
             background: linear-gradient(to bottom, #111118, transparent);
-            border-bottom: 1px solid #222;
         }
 
-        .stat-item { display: flex; flex-direction: column; gap: 5px; min-width: 140px; }
+        .stat-item { display: flex; flex-direction: column; gap: 5px; min-width: 150px; }
         .bar-outer { width: 100%; height: 8px; background: #111; border: 1px solid #333; border-radius: 4px; overflow: hidden; }
-        .bar-inner { height: 100%; transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        .bar-inner { height: 100%; transition: width 0.4s; }
 
         /* 战斗舞台 */
         #stage {
             width: 100%; max-width: 900px; height: 450px;
             position: relative; margin-top: 10px;
-            background: 
-                radial-gradient(circle at 50% 50%, #1a1a25 0%, transparent 70%),
-                url('https://www.transparenttextures.com/patterns/dark-matter.png');
+            background: radial-gradient(circle at 50% 50%, #1a1a25 0%, transparent 70%);
         }
 
         #enemy-row { position: absolute; top: 80px; width: 100%; display: flex; justify-content: center; gap: 25px; }
         #player-row { position: absolute; bottom: 80px; width: 100%; display: flex; justify-content: center; }
 
-        .unit { position: relative; width: 70px; height: 70px; transition: transform 0.1s; }
+        .unit { position: relative; width: 70px; height: 70px; }
         .diamond-frame { 
             position: absolute; width: 100%; height: 100%; 
             border: 2px solid var(--accent); transform: rotate(45deg);
@@ -54,25 +48,23 @@
             display: flex; align-items: center; justify-content: center;
         }
         .enemy .diamond-frame { border-color: #7f1d1d; }
-        
-        .unit-content { 
-            position: relative; z-index: 2; text-align: center; 
-            font-size: 12px; font-weight: bold; width: 100%;
-        }
+        .unit-content { position: relative; z-index: 2; text-align: center; font-size: 12px; font-weight: bold; width: 100%; }
 
-        /* 炉石对撞动画 */
+        /* 动画 */
         .bump-up { animation: bump-up-anim 0.4s ease-in-out; z-index: 50; }
         .bump-down { animation: bump-down-anim 0.4s ease-in-out; z-index: 50; }
+        @keyframes bump-up-anim { 0% { transform: translateY(0); } 40% { transform: translateY(-120px); } 100% { transform: translateY(0); } }
+        @keyframes bump-down-anim { 0% { transform: translateY(0); } 40% { transform: translateY(120px); } 100% { transform: translateY(0); } }
 
-        @keyframes bump-up-anim {
-            0% { transform: translateY(0); }
-            40% { transform: translateY(-120px) scale(1.1); }
-            100% { transform: translateY(0); }
+        /* 跳字系统 */
+        .pop-text {
+            position: absolute; pointer-events: none; font-weight: 900; z-index: 100;
+            animation: pop-fade 1s forwards; white-space: nowrap;
         }
-        @keyframes bump-down-anim {
-            0% { transform: translateY(0); }
-            40% { transform: translateY(120px) scale(1.1); }
-            100% { transform: translateY(0); }
+        @keyframes pop-fade {
+            0% { transform: translateY(0) scale(0.5); opacity: 0; }
+            20% { transform: translateY(-20px) scale(1.2); opacity: 1; }
+            100% { transform: translateY(-60px) scale(1); opacity: 0; }
         }
 
         /* 天赋星图 */
@@ -80,44 +72,31 @@
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.98); z-index: 1000;
         }
-
         #tree-canvas-wrap {
-            position: relative; width: 900px; height: 650px; margin: 30px auto;
+            position: relative; width: 1000px; height: 700px; margin: 20px auto;
             background: #050507; border: 1px solid #222; overflow: hidden;
         }
-
         .node {
-            position: absolute; width: 44px; height: 44px;
-            border-radius: 50%; background: #0a0a0a; border: 2px solid var(--node-off);
-            cursor: pointer; transform: translate(-50%, -50%);
-            z-index: 10; transition: all 0.3s;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 10px; color: #888;
+            position: absolute; width: 36px; height: 36px; border-radius: 50%;
+            background: #0a0a0a; border: 2px solid #333; cursor: pointer;
+            transform: translate(-50%, -50%); z-index: 10; transition: 0.3s;
         }
-        .node.active { border-color: var(--node-on); box-shadow: 0 0 20px var(--node-on); color: var(--node-on); background: #1a150a; }
-        .node.reachable { border-color: #555; color: #aaa; }
-        .node:hover { transform: translate(-50%, -50%) scale(1.15); z-index: 20; }
-
-        /* Tooltip 浮窗 */
+        .node.active { border-color: var(--accent); box-shadow: 0 0 15px var(--accent); background: #221a00; }
+        .node.reachable { border-color: #666; }
+        .node.keystone { width: 50px; height: 50px; border-style: double; border-width: 4px; }
+        
         #tooltip {
             position: fixed; display: none; padding: 12px; background: #111;
             border: 1px solid var(--accent); color: #eee; font-size: 13px;
-            pointer-events: none; z-index: 2000; width: 180px;
-            box-shadow: 5px 5px 15px rgba(0,0,0,0.5);
+            pointer-events: none; z-index: 2000; width: 220px;
         }
-        #tooltip b { color: var(--accent); display: block; margin-bottom: 4px; }
 
-        /* 控制台 */
-        #controls { margin-top: 20px; display: flex; gap: 25px; }
         .btn {
             padding: 12px 40px; background: #0d0d12; border: 1px solid var(--accent);
             color: var(--accent); cursor: pointer; font-size: 16px; font-weight: bold;
-            transition: 0.2s;
         }
-        .btn:hover:not(:disabled) { background: var(--accent); color: #000; box-shadow: 0 0 15px var(--accent); }
-        .btn:disabled { opacity: 0.2; cursor: not-allowed; }
-
-        #log { color: #666; font-size: 14px; margin-top: 15px; font-style: italic; }
+        .btn:hover:not(:disabled) { background: var(--accent); color: #000; }
+        .btn:disabled { opacity: 0.2; }
     </style>
 </head>
 <body>
@@ -154,37 +133,32 @@
         </div>
     </div>
 
-    <div id="log">等待指令...</div>
-
-    <div id="controls">
+    <div id="controls" style="margin-top:20px; display:flex; gap:20px;">
         <button id="fight-btn" class="btn" onclick="game.startAutoBattle()">进入战斗</button>
         <button id="tree-btn" class="btn" onclick="ui.toggleTree(true)">天赋星图 (<span id="pts-val">0</span>)</button>
     </div>
 
     <div id="tree-overlay">
-        <h2 style="text-align:center; color:var(--accent); letter-spacing:4px;">天赋觉醒</h2>
+        <h2 style="text-align:center; color:var(--accent); margin:10px;">天赋觉醒 (剩余点数: <span id="pts-val-2">0</span>)</h2>
         <div id="tree-canvas-wrap">
             <svg id="tree-svg" style="position:absolute; width:100%; height:100%; pointer-events:none;"></svg>
             <div id="nodes-layer"></div>
         </div>
-        <div style="text-align:center;">
-            <button class="btn" onclick="ui.toggleTree(false)">返回深渊</button>
-        </div>
+        <div style="text-align:center;"><button class="btn" onclick="ui.toggleTree(false)">返回战斗</button></div>
     </div>
 
     <div id="tooltip"></div>
 
     <script>
-        // --- 游戏逻辑核心 ---
+        // --- 核心逻辑 ---
         const game = {
             player: {
                 hp: 150, maxHp: 150, atk: 15,
                 lvl: 1, xp: 0, nextXp: 50, pts: 0,
-                multi: 1, cleave: 0, lifesteal: 0, armor: 0
+                multi: 1, cleave: 0, lifesteal: 0, armor: 0,
+                critChance: 0.05, critMult: 1.5, cull: 0, reflect: 0
             },
-            enemies: [],
-            wave: 1,
-            isFighting: false,
+            enemies: [], wave: 1, isFighting: false,
 
             init() {
                 this.spawnEnemies();
@@ -197,9 +171,9 @@
                 const count = Math.min(Math.floor(this.wave / 3) + 1, 7);
                 for (let i = 0; i < count; i++) {
                     this.enemies.push({
-                        hp: 25 + (this.wave * 10),
-                        maxHp: 25 + (this.wave * 10),
-                        atk: 4 + (this.wave * 2)
+                        hp: 30 + (this.wave * 12),
+                        maxHp: 30 + (this.wave * 12),
+                        atk: 5 + (this.wave * 2)
                     });
                 }
                 ui.renderEnemies();
@@ -215,14 +189,14 @@
                     for (let i = 0; i < this.player.multi; i++) {
                         if (this.enemies.length === 0) break;
                         await this.duel(true);
-                        if (this.enemies.length === 0) break;
+                        this.checkCull();
+                        this.enemies = this.enemies.filter(e => e.hp > 0);
+                        ui.renderEnemies();
                         await this.sleep(200);
                     }
-
-                    if (this.enemies.length === 0 || this.player.hp <= 0) break;
+                    if (this.enemies.length === 0) break;
 
                     // 敌人回合
-                    ui.log("敌方反击...");
                     for (let j = 0; j < this.enemies.length; j++) {
                         await this.duel(false, j);
                         if (this.player.hp <= 0) break;
@@ -230,53 +204,89 @@
                     }
                     await this.sleep(400);
                 }
-
                 this.endBattle();
             },
 
-            async duel(isPlayerAttacking, enemyIdx = 0) {
-                const target = isPlayerAttacking ? this.enemies[0] : this.player;
-                const attacker = isPlayerAttacking ? this.player : this.enemies[enemyIdx];
+            async duel(isPlayer, enemyIdx = 0) {
+                const target = isPlayer ? this.enemies[0] : this.player;
+                const attacker = isPlayer ? this.player : this.enemies[enemyIdx];
                 
-                // 1. 触发对撞动画
-                const playerEl = document.getElementById('player-unit');
-                const enemyEls = document.querySelectorAll('.enemy');
-                const activeEnemyEl = enemyEls[enemyIdx];
+                // 动画触发
+                const pEl = document.getElementById('player-unit');
+                const eEls = document.querySelectorAll('.enemy');
+                const activeEEl = eEls[enemyIdx];
+                if (isPlayer) pEl.classList.add('bump-up');
+                else if (activeEEl) activeEEl.classList.add('bump-down');
 
-                if (isPlayerAttacking) playerEl.classList.add('bump-up');
-                else if (activeEnemyEl) activeEnemyEl.classList.add('bump-down');
+                await this.sleep(150);
 
-                await this.sleep(150); // 撞击瞬间
+                // 数值计算
+                let dmg = attacker.atk;
+                let isCrit = false;
 
-                // 2. 数值结算
-                if (isPlayerAttacking) {
-                    target.hp -= attacker.atk;
-                    this.player.hp -= target.atk; // 反震
-                    if (this.player.lifesteal > 0) {
-                        this.player.hp = Math.min(this.player.maxHp, this.player.hp + (attacker.atk * this.player.lifesteal));
+                if (isPlayer) {
+                    if (Math.random() < this.player.critChance) {
+                        dmg *= this.player.critMult;
+                        isCrit = true;
                     }
-                    if (this.player.cleave > 0 && this.enemies[1]) {
-                        this.enemies[1].hp -= attacker.atk * 0.4;
+                    target.hp -= dmg;
+                    this.createPop(activeEEl, Math.floor(dmg), isCrit ? '#ffcc00' : '#ff4444', isCrit);
+                    
+                    // 反震伤害
+                    this.player.hp -= target.atk;
+                    this.createPop(pEl, target.atk, '#770000');
+
+                    // 吸血
+                    if (this.player.lifesteal > 0) {
+                        const heal = Math.floor(dmg * this.player.lifesteal);
+                        this.player.hp = Math.min(this.player.maxHp, this.player.hp + heal);
+                        if (heal > 0) this.createPop(pEl, `+${heal}`, '#44ff44');
                     }
                 } else {
-                    const finalDmg = Math.max(1, attacker.atk - this.player.armor);
+                    const finalDmg = Math.max(1, dmg - this.player.armor);
                     this.player.hp -= finalDmg;
+                    this.createPop(pEl, finalDmg, '#ff4444');
+                    
+                    // 反伤
+                    if (this.player.reflect > 0) {
+                        attacker.hp -= this.player.reflect;
+                        this.createPop(activeEEl, this.player.reflect, '#ffaa00');
+                    }
                 }
 
                 ui.update();
-                await this.sleep(250); // 回弹动画结束
-                
-                playerEl.classList.remove('bump-up');
-                if (activeEnemyEl) activeEnemyEl.classList.remove('bump-down');
+                await this.sleep(250);
+                pEl.classList.remove('bump-up');
+                if (activeEEl) activeEEl.classList.remove('bump-down');
+            },
 
-                this.enemies = this.enemies.filter(e => e.hp > 0);
-                ui.renderEnemies();
+            checkCull() {
+                if (this.player.cull > 0 && this.enemies[0]) {
+                    if (this.enemies[0].hp / this.enemies[0].maxHp < 0.15) {
+                        this.enemies[0].hp = 0;
+                        this.createPop(document.querySelectorAll('.enemy')[0], "斩杀!", "#ffffff");
+                    }
+                }
+            },
+
+            createPop(el, text, color, isCrit = false) {
+                if (!el) return;
+                const rect = el.getBoundingClientRect();
+                const pop = document.createElement('div');
+                pop.className = 'pop-text';
+                pop.style.left = (rect.left + rect.width/2) + 'px';
+                pop.style.top = (rect.top) + 'px';
+                pop.style.color = color;
+                pop.style.fontSize = isCrit ? '24px' : '18px';
+                pop.innerText = text;
+                document.body.appendChild(pop);
+                setTimeout(() => pop.remove(), 1000);
             },
 
             endBattle() {
                 this.isFighting = false;
                 if (this.player.hp <= 0) {
-                    alert(`战败！你止步于波次 ${this.wave}`);
+                    alert(`战败！你止步于第 ${this.wave} 波`);
                     location.reload();
                 } else {
                     this.gainXp(25 + this.wave * 15);
@@ -284,7 +294,6 @@
                     this.wave++;
                     this.spawnEnemies();
                     ui.setControlState(true);
-                    ui.log(`战斗胜利！生命值已大幅回复。`);
                 }
                 ui.update();
             },
@@ -296,32 +305,45 @@
                     this.player.lvl++;
                     this.player.pts++;
                     this.player.nextXp = Math.floor(this.player.nextXp * 1.4);
-                    ui.log("等级提升！获得天赋点。");
                 }
             },
-
             sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
         };
 
-        // --- 天赋树系统 ---
+        // --- 天赋星图数据 (PoE 风格扩张) ---
         const treeData = {
             nodes: [
-                { id: 0, x: 450, y: 325, name: '魂之源', desc: '一切力量的起点', effect: () => {} },
-                // 攻击系 (右)
-                { id: 1, x: 550, y: 325, name: '磨砺', desc: '攻击力 +10', effect: () => game.player.atk += 10 },
-                { id: 2, x: 650, y: 250, name: '狂暴', desc: '单回合攻击次数 +1', effect: () => game.player.multi += 1 },
-                { id: 3, x: 650, y: 400, name: '横扫', desc: '攻击时对相邻敌人造成40%溅射伤害', effect: () => game.player.cleave = 1 },
-                // 防御系 (左)
-                { id: 4, x: 350, y: 325, name: '坚韧', desc: '最大生命值 +80', effect: () => { game.player.maxHp += 80; game.player.hp += 80; } },
-                { id: 5, x: 250, y: 250, name: '重甲', desc: '固定减免受到的伤害 5 点', effect: () => game.player.armor += 5 },
-                { id: 6, x: 250, y: 400, name: '贪婪', desc: '获得 20% 伤害吸血', effect: () => game.player.lifesteal += 0.2 },
+                { id: 0, x: 500, y: 350, name: '起源', desc: '一切的开始', effect: () => {} },
+                // 力量扇区 (右下 - 攻击与处决)
+                { id: 1, x: 600, y: 400, name: '力量', desc: '攻击力 +10', effect: () => game.player.atk += 10 },
+                { id: 2, x: 700, y: 450, name: '重击', desc: '攻击力 +20', effect: () => game.player.atk += 20 },
+                { id: 3, x: 800, y: 500, name: '处决者', desc: '核心：生命低于15%的敌人直接死亡', effect: () => game.player.cull = 1, keystone: true },
+                { id: 4, x: 700, y: 350, name: '风怒', desc: '攻击次数 +1', effect: () => game.player.multi += 1 },
+                
+                // 敏捷扇区 (右上 - 暴击与吸血)
+                { id: 5, x: 600, y: 250, name: '敏锐', desc: '暴击率 +10%', effect: () => game.player.critChance += 0.1 },
+                { id: 6, x: 700, y: 150, name: '致命一击', desc: '暴击伤害 +100%', effect: () => game.player.critMult += 1.0 },
+                { id: 7, x: 600, y: 100, name: '贪婪', desc: '吸血 +15%', effect: () => game.player.lifesteal += 0.15 },
+                { id: 8, x: 500, y: 150, name: '血池', desc: '核心：吸血效果翻倍，但不再战后回血', effect: () => { game.player.lifesteal *= 2; game.endBattle = function() { 
+                    this.isFighting = false; if(this.player.hp <= 0) location.reload(); else { this.gainXp(50); this.wave++; this.spawnEnemies(); ui.setControlState(true); }
+                }}, keystone: true },
+
+                // 防御扇区 (左侧 - 生命与反伤)
+                { id: 9, x: 400, y: 350, name: '体魄', desc: '最大生命 +100', effect: () => { game.player.maxHp += 100; game.player.hp += 100; } },
+                { id: 10, x: 300, y: 450, name: '坚毅', desc: '最大生命 +200', effect: () => { game.player.maxHp += 200; game.player.hp += 200; } },
+                { id: 11, x: 300, y: 250, name: '护甲', desc: '固定减伤 +8', effect: () => game.player.armor += 8 },
+                { id: 12, x: 200, y: 350, name: '荆棘', desc: '反弹 15 点伤害', effect: () => game.player.reflect += 15 },
+                { id: 13, x: 100, y: 350, name: '瓦尔之壳', desc: '核心：护甲翻倍，但攻击力降低30%', effect: () => { game.player.armor *= 2; game.player.atk *= 0.7; }, keystone: true }
             ],
-            links: [[0,1], [1,2], [1,3], [0,4], [4,5], [4,6]]
+            links: [
+                [0,1], [1,2], [2,3], [1,4],
+                [0,5], [5,6], [5,7], [7,8],
+                [0,9], [9,10], [9,11], [10,12], [11,12], [12,13]
+            ]
         };
 
         const ui = {
             activeNodes: [0],
-
             update() {
                 document.getElementById('hp-val').innerText = `${Math.ceil(game.player.hp)}/${game.player.maxHp}`;
                 document.getElementById('hp-fill').style.width = (game.player.hp / game.player.maxHp * 100) + '%';
@@ -330,10 +352,10 @@
                 document.getElementById('lvl-val').innerText = game.player.lvl;
                 document.getElementById('wave-val').innerText = game.wave;
                 document.getElementById('pts-val').innerText = game.player.pts;
-                document.getElementById('p-atk-display').innerText = game.player.atk;
+                document.getElementById('pts-val-2').innerText = game.player.pts;
+                document.getElementById('p-atk-display').innerText = Math.floor(game.player.atk);
                 this.refreshTree();
             },
-
             renderEnemies() {
                 const row = document.getElementById('enemy-row');
                 row.innerHTML = '';
@@ -344,35 +366,29 @@
                     row.appendChild(d);
                 });
             },
-
             initTree() {
                 const layer = document.getElementById('nodes-layer');
                 const svg = document.getElementById('tree-svg');
-                
                 treeData.links.forEach(link => {
                     const n1 = treeData.nodes[link[0]], n2 = treeData.nodes[link[1]];
                     const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
                     line.setAttribute("x1", n1.x); line.setAttribute("y1", n1.y);
                     line.setAttribute("x2", n2.x); line.setAttribute("y2", n2.y);
-                    line.setAttribute("stroke", "#222"); line.setAttribute("stroke-width", "3");
+                    line.setAttribute("stroke", "#222"); line.setAttribute("stroke-width", "2");
                     line.id = `l-${link[0]}-${link[1]}`;
                     svg.appendChild(line);
                 });
-
                 treeData.nodes.forEach(node => {
                     const div = document.createElement('div');
-                    div.className = 'node';
+                    div.className = 'node' + (node.keystone ? ' keystone' : '');
                     div.id = `n-${node.id}`;
                     div.style.left = node.x + 'px'; div.style.top = node.y + 'px';
-                    div.innerHTML = node.id === 0 ? 'START' : '';
-                    
                     div.onmouseover = (e) => this.showTooltip(e, node);
                     div.onmouseout = () => this.hideTooltip();
                     div.onclick = () => this.buyTalent(node);
                     layer.appendChild(div);
                 });
             },
-
             refreshTree() {
                 treeData.nodes.forEach(node => {
                     const el = document.getElementById(`n-${node.id}`);
@@ -383,37 +399,27 @@
                 treeData.links.forEach(link => {
                     const line = document.getElementById(`l-${link[0]}-${link[1]}`);
                     if (this.activeNodes.includes(link[0]) && this.activeNodes.includes(link[1])) {
-                        line.setAttribute("stroke", "#c5a059");
-                        line.setAttribute("stroke-width", "4");
+                        line.setAttribute("stroke", "#c5a059"); line.setAttribute("stroke-width", "3");
                     }
                 });
             },
-
             canReach(id) {
                 return treeData.links.some(l => (l[0]===id && this.activeNodes.includes(l[1])) || (l[1]===id && this.activeNodes.includes(l[0])));
             },
-
             buyTalent(node) {
                 if (game.player.pts > 0 && !this.activeNodes.includes(node.id) && this.canReach(node.id)) {
-                    game.player.pts--;
-                    this.activeNodes.push(node.id);
-                    node.effect();
-                    this.update();
+                    game.player.pts--; this.activeNodes.push(node.id);
+                    node.effect(); this.update();
                 }
             },
-
             showTooltip(e, node) {
                 const tt = document.getElementById('tooltip');
-                tt.style.display = 'block';
-                tt.style.left = (e.clientX + 15) + 'px';
-                tt.style.top = (e.clientY + 15) + 'px';
-                tt.innerHTML = `<b>${node.name}</b>${node.desc}`;
+                tt.style.display = 'block'; tt.style.left = (e.clientX + 15) + 'px'; tt.style.top = (e.clientY + 15) + 'px';
+                tt.innerHTML = `<b style="color:${node.keystone?'#ffcc00':'#c5a059'}">${node.name}</b><br>${node.desc}`;
             },
-
             hideTooltip() { document.getElementById('tooltip').style.display = 'none'; },
             toggleTree(s) { document.getElementById('tree-overlay').style.display = s ? 'block' : 'none'; },
-            setControlState(s) { document.getElementById('fight-btn').disabled = !s; document.getElementById('tree-btn').disabled = !s; },
-            log(m) { document.getElementById('log').innerText = m; }
+            setControlState(s) { document.getElementById('fight-btn').disabled = !s; document.getElementById('tree-btn').disabled = !s; }
         };
 
         game.init();
